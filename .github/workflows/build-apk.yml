@@ -11,6 +11,11 @@ jobs:
     steps:
       - name: Descargar código
         uses: actions/checkout@v4
+      - name: Verificar motor y controles offline
+        run: |
+          node --check app/src/main/assets/www/solo-engine.js
+          node --check app/src/main/assets/www/ui.js
+          node tests/offline.test.js
       - name: Preparar Java 17
         uses: actions/setup-java@v4
         with:
@@ -27,6 +32,9 @@ jobs:
           gradle-version: '8.9'
       - name: Compilar instalador
         run: gradle :app:assembleDebug --stacktrace
+      - name: Validar que el instalador incluye el juego offline
+        run: |
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E 'assets/www/(index.html|ui.js|solo-engine.js)'
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
