@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-  <application android:label="Crónicas del Abismo" android:theme="@android:style/Theme.Material.NoActionBar" android:hardwareAccelerated="true" android:usesCleartextTraffic="true" android:allowBackup="false">
+  <application android:label="Crónicas del Abismo" android:icon="@drawable/ic_abismo" android:roundIcon="@drawable/ic_abismo" android:theme="@android:style/Theme.Material.NoActionBar" android:hardwareAccelerated="true" android:usesCleartextTraffic="true" android:allowBackup="false">
     <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="sensorLandscape" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustResize">
       <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
     </activity>
