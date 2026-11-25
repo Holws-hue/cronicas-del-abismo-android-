@@ -1,0 +1,46 @@
+<!doctype html><html lang="es-AR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0e111b"><title>Crónicas del Abismo — Las Puertas Olvidadas</title>
+<link rel="stylesheet" href="style.css"></head><body>
+<main id="main-menu" class="full">
+ <canvas id="menu-canvas" aria-hidden="true"></canvas><div class="vignette"></div>
+ <div class="brand"><div class="brand-symbol">✥</div><div class="small-kicker">UN MUNDO DE FANTASÍA OSCURA</div>
+ <h1>CRÓNICAS <i>DEL</i><br><span>ABISMO</span></h1><div class="brand-subtitle">LAS PUERTAS OLVIDADAS</div>
+ <p>El abismo recuerda a quienes nunca regresaron.</p></div>
+ <nav class="menu-actions">
+   <button id="btn-solo" class="main-btn primary"><span class="btn-icon">⚔</span><span>JUGAR<small>AVENTURA SIN INTERNET</small></span><b>›</b></button>
+   <button id="btn-multi" class="main-btn"><span class="btn-icon">⛨</span><span>MULTIJUGADOR<small>PC Y ANDROID · RED LAN</small></span><b>›</b></button>
+   <button id="btn-options" class="main-btn"><span class="btn-icon">⚙</span><span>OPCIONES<small>SONIDO · GRÁFICOS · CONTROLES</small></span><b>›</b></button>
+ </nav>
+ <div id="menu-biome" class="biome-tag">❄ LAS TIERRAS DE ESCARCHA</div>
+ <footer class="bottom-note">VERSIÓN 0.2 · COFRE PROTEGIDO · CADA 10 PISOS UN JEFE</footer>
+</main>
+<section id="panel" class="screen-layer hidden" aria-label="Menú de partida">
+ <div class="panel-card"><div class="panel-head"><span class="tiny-kicker">LAS PUERTAS OLVIDADAS</span><button id="close-panel" class="xbutton">✕</button></div>
+ <div id="panel-body"></div></div>
+</section>
+<section id="game-screen" class="full hidden">
+ <canvas id="view" aria-label="Exploración de mazmorra en primera persona"></canvas>
+ <div class="game-vignette"></div>
+ <div class="game-top"><span class="game-logo">✥ ABISMO <em id="floor-label">PISO 1</em></span><div class="topbuttons">
+    <button id="btn-bag">▣ <small>MOCHILA</small></button><button id="btn-map">⌖ <small>MAPA</small></button><button id="btn-pause">☰ <small>MENÚ</small></button>
+ </div></div>
+ <div class="hero-status"><div class="hero-line"><strong id="hero-label">AVENTURERO</strong><span id="hero-level">NIV. 1</span></div>
+ <div class="bar health"><span id="hp-fill"></span><b id="hp-label">HP</b></div><div class="bar mana"><span id="mp-fill"></span><b id="mp-label">MP</b></div><div class="bar xp"><span id="xp-fill"></span><b id="xp-label">EXP</b></div></div>
+ <canvas id="minimap" width="128" height="128"></canvas><div class="crosshair">✛</div><div id="hint" class="hint"></div>
+ <div id="action-log"></div><div class="game-bottom"><span id="coin-label">◈ 0</span><span id="weapon-label">⚔</span></div>
+ <div id="touch-layer">
+   <div id="stick"><div id="knob"></div></div>
+   <div id="touch-buttons"><button id="hit" class="action hit">⚔<small>ATACAR</small></button>
+   <button id="use" class="action use">✦<small>USAR</small></button>
+   <button id="spell" class="action spell">✧<small>MAGIA</small></button>
+   <button id="heal" class="action heal">♥<small>CURAR</small></button></div>
+ </div>
+</section>
+<section id="modal" class="screen-layer hidden"><div class="modal-card">
+ <div class="panel-head"><span class="tiny-kicker">CRÓNICAS DEL ABISMO</span><button id="modal-close" class="xbutton">✕</button></div>
+ <div id="modal-content"></div>
+ </div></section>
+<div id="snackbar" class="snackbar hidden"></div>
+<script src="solo-engine.js"></script><script src="ui.js"></script>
+</body></html>
