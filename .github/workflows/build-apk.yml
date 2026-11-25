@@ -35,6 +35,10 @@ jobs:
       - name: Validar que el instalador incluye el juego offline
         run: |
           unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -E 'assets/www/(index.html|ui.js|solo-engine.js)'
+      - name: Comprobar firma Android v2 y metadatos
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging app/build/outputs/apk/debug/app-debug.apk | head -12
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
