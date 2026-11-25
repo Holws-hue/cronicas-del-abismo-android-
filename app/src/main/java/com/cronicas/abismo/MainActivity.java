@@ -3,166 +3,160 @@ package com.cronicas.abismo;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.os.Build;
 import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.content.res.ColorStateList;
+import android.content.res.Configuration;
 import android.net.Uri;
-import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
-import android.webkit.WebResourceRequest;
-import android.widget.*;
-import android.text.InputType;
+import java.io.InputStream;
+import java.io.IOException;
 
 public final class MainActivity extends Activity {
-    private final int GOLD = Color.rgb(232,187,107);
-    private final int CREAM = Color.rgb(246,236,220);
-    private final int DARK = Color.rgb(13,17,26);
-    private FrameLayout root;
-    private WebView browser;
-    private String serverHost;
-    private int serverPort = 8080;
-    private boolean errorShown = false;
+    private static final String ASSETS_HOST = "appassets.androidplatform.net";
+    private WebView web;
+    private boolean localPage = true;
+    private String remoteHost = null;
+    private int remotePort = 8080;
+    private boolean errorDialogShown = false;
 
-    @Override public void onCreate(Bundle state) {
-        super.onCreate(state);
+    @Override public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        landscapeFullscreen();
-        root = new FrameLayout(this);
-        setContentView(root);
-        showLobby();
-    }
-
-    private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density + .5f);}
-    private GradientDrawable background(int color,int corners){
-        GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(corners));return d;
-    }
-    private TextView text(String label,int size,int color,boolean bold){
-        TextView t=new TextView(this);t.setText(label);t.setTextColor(color);t.setTextSize(size);
-        t.setGravity(Gravity.CENTER);if(bold)t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t;
-    }
-    private void place(LinearLayout layout,View v,int bottom){
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);
-        p.bottomMargin=dp(bottom);layout.addView(v,p);
-    }
-    private void landscapeFullscreen(){
-        getWindow().getDecorView().setSystemUiVisibility(
-            View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|
-            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-    }
-    private void releaseBrowser(){
-        if(browser!=null){browser.stopLoading();browser.loadUrl("about:blank");browser.destroy();browser=null;}
-    }
-    private void showLobby(){
-        releaseBrowser();root.removeAllViews();errorShown=false;
-        GradientDrawable backdrop=new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-            new int[]{Color.rgb(34,19,28),DARK,Color.rgb(20,37,40)});
-        root.setBackground(backdrop);
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);
-        root.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
-        LinearLayout outer=new LinearLayout(this);outer.setGravity(Gravity.CENTER);
-        outer.setPadding(dp(20),dp(12),dp(20),dp(12));outer.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(outer,new ScrollView.LayoutParams(-1,-1));
-        LinearLayout panel=new LinearLayout(this);panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(dp(22),dp(18),dp(22),dp(16));
-        GradientDrawable panelBg=background(Color.rgb(23,28,37),18);
-        panelBg.setStroke(dp(1),Color.rgb(108,81,50));panel.setBackground(panelBg);
-        LinearLayout.LayoutParams panelParams=new LinearLayout.LayoutParams(-1,-2);
-        panelParams.width=Math.min(dp(520),getResources().getDisplayMetrics().widthPixels-dp(40));
-        outer.addView(panel,panelParams);
-        place(panel,text("⚔",40,GOLD,true),0);
-        place(panel,text("CRÓNICAS DEL ABISMO",23,GOLD,true),2);
-        place(panel,text("LAS PUERTAS OLVIDADAS  •  V0.1",11,CREAM,false),18);
-        place(panel,text("UNIRSE A UNA PARTIDA LAN",16,CREAM,true),8);
-        place(panel,text("Iniciá el servidor en la PC y conectá el teléfono al mismo Wi-Fi.",13,Color.rgb(188,185,179),false),14);
-        EditText ip=new EditText(this);ip.setTextSize(18);ip.setTextColor(CREAM);
-        ip.setHintTextColor(Color.rgb(159,156,149));ip.setHint("192.168.1.100:8080");
-        ip.setSingleLine(true);ip.setGravity(Gravity.CENTER);
-        ip.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);
-        ip.setPadding(dp(14),dp(10),dp(14),dp(10));ip.setBackground(background(DARK,10));
-        ip.setText(getPreferences(MODE_PRIVATE).getString("host",""));
-        place(panel,ip,12);
-        Button play=new Button(this);play.setText("CONECTAR Y JUGAR");play.setAllCaps(false);
-        play.setTextColor(DARK);play.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-        play.setBackground(background(GOLD,10));place(panel,play,12);
-        play.setOnClickListener(v->connect(ip.getText().toString()));
-        place(panel,text("El servidor guarda personajes y baúl. Android es el cliente de juego.",12,Color.rgb(162,164,166),false),0);
-    }
-
-    private static boolean isPrivateIp(String host){
-        if(host==null || !host.matches("[0-9]{1,3}(\\.[0-9]{1,3}){3}"))return false;
-        String[] parts=host.split("\\.");
-        int[] a=new int[4];
-        for(int i=0;i<4;i++){a[i]=Integer.parseInt(parts[i]);if(a[i]>255)return false;}
-        return a[0]==10||(a[0]==192&&a[1]==168)||(a[0]==172&&a[1]>=16&&a[1]<=31);
-    }
-
-    private void connect(String address){
-        try{
-            String raw=address.trim().replaceFirst("^https?://","").replaceFirst("/.*$","");
-            Uri uri=Uri.parse("http://"+raw);
-            String host=uri.getHost();int port=uri.getPort()==-1?8080:uri.getPort();
-            if(!isPrivateIp(host)||port<1||port>65535||uri.getUserInfo()!=null){
-                new AlertDialog.Builder(this).setTitle("Dirección inválida")
-                    .setMessage("Ingresá la IP privada de la PC, por ejemplo 192.168.1.10:8080.")
-                    .setPositiveButton("OK",null).show();return;
+        fullscreen();
+        web = new WebView(this);
+        web.setBackgroundColor(Color.rgb(9, 14, 24));
+        setContentView(web);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setSupportZoom(false);
+        s.setBuiltInZoomControls(false);
+        s.setDisplayZoomControls(false);
+        s.setMediaPlaybackRequiresUserGesture(true);
+        if (Build.VERSION.SDK_INT >= 26) s.setSafeBrowsingEnabled(true);
+        web.setWebChromeClient(new WebChromeClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if (!"https".equals(u.getScheme()) || !ASSETS_HOST.equals(u.getHost())) return null;
+                String p = u.getPath();
+                if (p == null || !p.startsWith("/assets/www/")) return forbidden();
+                String filename = p.substring("/assets/www/".length());
+                if (filename.isEmpty()) filename = "index.html";
+                if (filename.contains("..") || filename.contains("\\") || filename.startsWith("/")) return forbidden();
+                String mime = filename.endsWith(".html") ? "text/html" :
+                        filename.endsWith(".css") ? "text/css" :
+                        filename.endsWith(".js") ? "application/javascript" :
+                        filename.endsWith(".svg") ? "image/svg+xml" :
+                        filename.endsWith(".png") ? "image/png" : "text/plain";
+                try {
+                    InputStream stream = getAssets().open("www/" + filename);
+                    return new WebResourceResponse(mime, "UTF-8", 200, "OK",
+                            java.util.Collections.singletonMap("Cache-Control","no-store"), stream);
+                } catch (IOException e) {
+                    return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found",
+                            java.util.Collections.emptyMap(), new java.io.ByteArrayInputStream(new byte[0]));
+                }
             }
-            serverHost=host;serverPort=port;
-            getPreferences(MODE_PRIVATE).edit().putString("host",raw).apply();
-            startWeb();
-        }catch(Exception e){
-            new AlertDialog.Builder(this).setMessage("Revisá la IP de la PC.")
-                .setPositiveButton("OK",null).show();
-        }
-    }
-
-    private void startWeb(){
-        releaseBrowser();root.removeAllViews();root.setBackgroundColor(DARK);errorShown=false;
-        browser=new WebView(this);
-        WebSettings settings=browser.getSettings();
-        settings.setJavaScriptEnabled(true);settings.setDomStorageEnabled(true);
-        settings.setAllowFileAccess(false);settings.setAllowContentAccess(false);
-        settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setJavaScriptCanOpenWindowsAutomatically(false);
-        settings.setSupportZoom(false);settings.setBuiltInZoomControls(false);
-        browser.setBackgroundColor(DARK);
-        browser.setWebChromeClient(new WebChromeClient());
-        browser.setWebViewClient(new WebViewClient(){
-            @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
-                Uri link=request.getUrl();
-                return !("http".equals(link.getScheme())&&serverHost.equals(link.getHost())&&serverPort==link.getPort());
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if (localPage) return !("https".equals(u.getScheme()) && ASSETS_HOST.equals(u.getHost()));
+                return !("http".equals(u.getScheme()) && remoteHost != null &&
+                         remoteHost.equals(u.getHost()) && (u.getPort() == remotePort || (remotePort == 80 && u.getPort() == -1)));
             }
-            @Override public void onReceivedError(WebView view,WebResourceRequest request,WebResourceError error){
-                if(request.isForMainFrame()&&!errorShown){
-                    errorShown=true;
-                    runOnUiThread(()->new AlertDialog.Builder(MainActivity.this)
-                        .setTitle("Sin conexión LAN")
-                        .setMessage("Comprobá que la PC esté ejecutando el servidor Node.js, la IP sea correcta y el puerto "+serverPort+" esté permitido.")
-                        .setNegativeButton("CAMBIAR IP",(d,w)->showLobby())
-                        .setPositiveButton("REINTENTAR",(d,w)->startWeb())
-                        .setCancelable(false).show());
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (!localPage && request.isForMainFrame() && !errorDialogShown) {
+                    errorDialogShown = true;
+                    runOnUiThread(() -> new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("No se pudo conectar a la PC")
+                            .setMessage("Revisá que el servidor esté iniciado, que ambos dispositivos estén en la misma red y que el puerto " + remotePort + " esté permitido.")
+                            .setNegativeButton("VOLVER AL MENÚ", (d,w) -> openLocal())
+                            .setPositiveButton("REINTENTAR", (d,w) -> openLanInternal(remoteHost,remotePort))
+                            .setCancelable(false).show());
                 }
             }
         });
-        root.addView(browser,new FrameLayout.LayoutParams(-1,-1));
-        browser.loadUrl("http://"+serverHost+":"+serverPort+"/");
-        landscapeFullscreen();
+        openLocal();
     }
-    @Override public void onBackPressed(){
-        if(browser==null){super.onBackPressed();return;}
-        new AlertDialog.Builder(this).setTitle("Salir de la expedición")
-            .setMessage("Al desconectarte dentro de la mazmorra se pierde el equipo de esa expedición. ¿Volver al menú?")
-            .setNegativeButton("SEGUIR JUGANDO",(d,w)->landscapeFullscreen())
-            .setPositiveButton("DESCONECTAR",(d,w)->showLobby()).show();
+
+    private static WebResourceResponse forbidden() {
+        return new WebResourceResponse("text/plain","UTF-8",403,"Forbidden",
+                java.util.Collections.emptyMap(),new java.io.ByteArrayInputStream(new byte[0]));
     }
-    @Override protected void onResume(){super.onResume();if(browser!=null)browser.onResume();landscapeFullscreen();}
-    @Override protected void onPause(){if(browser!=null)browser.onPause();super.onPause();}
-    @Override protected void onDestroy(){releaseBrowser();super.onDestroy();}
+
+    private void fullscreen() {
+        getWindow().getDecorView().setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|
+                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+    }
+
+    private static boolean privateIp(String host) {
+        if (host == null || !host.matches("[0-9]{1,3}(\\.[0-9]{1,3}){3}")) return false;
+        String[] s = host.split("\\.");
+        int[] v = new int[4];
+        try {
+            for (int i=0;i<4;i++) {v[i]=Integer.parseInt(s[i]); if(v[i]>255)return false;}
+        } catch (NumberFormatException e) {return false;}
+        return v[0]==10 || (v[0]==192 && v[1]==168) || (v[0]==172 && v[1]>=16 && v[1]<=31);
+    }
+
+    @JavascriptInterface public void connectLan(String address) {
+        runOnUiThread(() -> {
+            try {
+                String a = address.trim().replaceFirst("^https?://","").replaceFirst("/.*$","");
+                Uri u=Uri.parse("http://" + a);
+                String host=u.getHost();
+                int port=u.getPort()==-1?8080:u.getPort();
+                if(!localPage || !privateIp(host) || port<1 || port>65535 || u.getUserInfo()!=null) {
+                    web.evaluateJavascript("window.abismoNotify && window.abismoNotify('Usá una IP privada como 192.168.1.10:8080')",null);
+                    return;
+                }
+                openLanInternal(host,port);
+            } catch(Exception e) {
+                web.evaluateJavascript("window.abismoNotify && window.abismoNotify('Dirección LAN inválida')",null);
+            }
+        });
+    }
+
+    private void openLanInternal(String host,int port) {
+        localPage=false;remoteHost=host;remotePort=port;errorDialogShown=false;
+        web.removeJavascriptInterface("AndroidBridge");
+        web.loadUrl("http://" + host + ":" + port + "/");
+        fullscreen();
+    }
+
+    private void openLocal() {
+        localPage=true;remoteHost=null;errorDialogShown=false;
+        web.addJavascriptInterface(this,"AndroidBridge");
+        web.loadUrl("https://" + ASSETS_HOST + "/assets/www/index.html");
+        fullscreen();
+    }
+
+    @Override public void onBackPressed() {
+        if (localPage) {
+            web.evaluateJavascript("window.abismoBack && window.abismoBack()",null);
+        } else {
+            new AlertDialog.Builder(this).setTitle("Volver al menú")
+                .setMessage("Salir durante una expedición LAN puede provocar la pérdida del botín que llevás.")
+                .setNegativeButton("SEGUIR JUGANDO",(d,w)->fullscreen())
+                .setPositiveButton("VOLVER",(d,w)->openLocal()).show();
+        }
+    }
+    @Override protected void onResume(){super.onResume();web.onResume();fullscreen();}
+    @Override protected void onPause(){web.onPause();super.onPause();}
+    @Override protected void onDestroy(){web.destroy();super.onDestroy();}
 }
